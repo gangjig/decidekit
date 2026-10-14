@@ -1,0 +1,13 @@
+{"case_id": "yn-threat", "model": "budget-1", "decision": {"probability": 0.72}, "cost_usd": 0.0008, "latency_ms": 310}
+{"case_id": "yn-recipe", "model": "budget-1", "decision": {"probability": 0.3}, "cost_usd": 0.0008, "latency_ms": 265}
+{"case_id": "yn-pills", "model": "budget-1", "decision": {"probability": 0.58}, "cost_usd": 0.0008, "latency_ms": 340}
+{"case_id": "yn-beach", "model": "budget-1", "decision": {"probability": 0.22}, "cost_usd": 0.0008, "latency_ms": 240}
+{"case_id": "yn-phish", "model": "budget-1", "decision": {"probability": 0.45}, "cost_usd": 0.0008, "latency_ms": 385}
+{"case_id": "yn-review", "model": "budget-1", "decision": {"probability": 0.4}, "cost_usd": 0.0008, "latency_ms": 290}
+{"case_id": "ch-lyrics", "model": "budget-1", "decision": {"picked": "allow", "probabilities": {"allow": 0.5, "flag_for_review": 0.3, "remove": 0.2}}, "cost_usd": 0.0008, "latency_ms": 360}
+{"case_id": "ch-explosives", "model": "budget-1", "decision": {"picked": "remove", "probabilities": {"allow": 0.2, "flag_for_review": 0.25, "remove": 0.55}}, "cost_usd": 0.0008, "latency_ms": 330}
+{"case_id": "ch-opinion", "model": "budget-1", "decision": {"picked": "flag_for_review", "probabilities": {"allow": 0.35, "flag_for_review": 0.45, "remove": 0.2}}, "cost_usd": 0.0008, "latency_ms": 275}
+{"case_id": "ch-selfharm", "model": "budget-1", "decision": {"picked": "remove", "probabilities": {"allow": 0.15, "flag_for_review": 0.25, "remove": 0.6}}, "cost_usd": 0.0008, "latency_ms": 355}
+{"case_id": "sc-mild", "model": "budget-1", "decision": {"value": 3, "confidence": 0.55}, "cost_usd": 0.0008, "latency_ms": 300}
+{"case_id": "sc-harass", "model": "budget-1", "decision": {"value": 6, "confidence": 0.5}, "cost_usd": 0.0008, "latency_ms": 320}
+{"case_id": "sc-threat", "model": "budget-1", "decision": {"value": 8, "confidence": 0.6}, "cost_usd": 0.0008, "latency_ms": 345}

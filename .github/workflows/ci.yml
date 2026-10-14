@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+      - name: Run tests
+        run: python -m pytest -q
+      - name: CLI smoke test on the sample dataset
+        run: |
+          decidekit validate --dataset data/sample_dataset.jsonl --results data/sample_results_careful-1.jsonl
+          decidekit compare --dataset data/sample_dataset.jsonl \
+            --results data/sample_results_careful-1.jsonl \
+                      data/sample_results_loud-1.jsonl \
+                      data/sample_results_budget-1.jsonl
