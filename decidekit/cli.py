@@ -1,4 +1,4 @@
-"""Command-line interface: score, compare, validate.
+"""Command-line interface: score, compare, tune, validate.
 
 Exit codes: 0 = success, 2 = validation error (loud failure, message on
 stderr), 1 = usage error (argparse).
@@ -15,6 +15,7 @@ from .data import load_cases, load_results, model_name_for
 from .metrics import evaluate
 from .report import build_comparison, render_markdown
 from .schemas import DecisionValidationError, parse_decision
+from .threshold import render_threshold_report, tune_threshold
 
 
 def _fmt(value, digits=3, prefix=""):
@@ -64,6 +65,25 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_tune(args: argparse.Namespace) -> int:
+    cases = load_cases(args.dataset)
+    records = load_results(args.results)
+    name = model_name_for(records, args.results, args.model)
+    report = tune_threshold(
+        cases,
+        records,
+        min_precision=args.min_precision,
+        min_recall=args.min_recall,
+        n_folds=args.folds,
+        seed=args.seed,
+    )
+    if args.json:
+        print(json.dumps({"model": name, **report}, indent=2))
+    else:
+        print(render_threshold_report(report, model=name), end="")
+    return 0
+
+
 def _cmd_validate(args: argparse.Namespace) -> int:
     cases = load_cases(args.dataset)
     records = load_results(args.results)
@@ -109,6 +129,24 @@ def build_parser() -> argparse.ArgumentParser:
                            help="Two or more results JSONL files, one per model")
     p_compare.add_argument("--json", action="store_true", help="Emit the comparison as JSON")
     p_compare.set_defaults(func=_cmd_compare)
+
+    p_tune = sub.add_parser(
+        "tune",
+        help="Tune the yes_no threshold from saved scores (stratified CV); no model calls",
+    )
+    p_tune.add_argument("--dataset", required=True, help="Dataset JSONL file")
+    p_tune.add_argument("--results", required=True, help="Model results JSONL file")
+    p_tune.add_argument("--model", default=None, help="Override the model name")
+    p_tune.add_argument("--min-precision", type=float, default=0.8,
+                        help="Minimum precision floor for the tuned threshold (default 0.8)")
+    p_tune.add_argument("--min-recall", type=float, default=0.8,
+                        help="Minimum recall floor for the tuned threshold (default 0.8)")
+    p_tune.add_argument("--folds", type=int, default=5,
+                        help="Stratified cross-validation folds (default 5; reduced to fit the smaller class)")
+    p_tune.add_argument("--seed", type=int, default=42,
+                        help="Shuffle seed for the fold split (default 42)")
+    p_tune.add_argument("--json", action="store_true", help="Emit the tuning report as JSON")
+    p_tune.set_defaults(func=_cmd_tune)
 
     p_validate = sub.add_parser("validate", help="Check a results file parses against the schemas")
     p_validate.add_argument("--dataset", required=True, help="Dataset JSONL file")

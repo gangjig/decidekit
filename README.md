@@ -32,6 +32,10 @@ decidekit compare --dataset data/sample_dataset.jsonl \
 # Check a results file parses against the schemas
 decidekit validate --dataset data/sample_dataset.jsonl \
                    --results data/sample_results_loud-1.jsonl
+
+# Tune the yes/no threshold from the saved scores (no model calls)
+decidekit tune --dataset data/sample_dataset.jsonl \
+               --results data/sample_results_budget-1.jsonl
 ```
 
 The comparison prints a Markdown table:
@@ -78,20 +82,50 @@ Parsing is **strict on purpose**: a picked choice that is not among the options,
 - **Cost per correct decision** — total cost of all scored calls divided by the number of correct `yes_no`/`choice` decisions. (Score cases are excluded from the denominator — "correct" isn't defined for a continuous score; their cost is included in the numerator.)
 - **Mean latency** — average `latency_ms` over scored calls, when provided.
 
+## Threshold tuning
+
+Every `yes_no` metric above thresholds the model's probability at **0.50** — a default nobody chose, and often the wrong one. A model that scores real violations at 0.45 gets them all wrong at 0.50 no matter how good its ranking is. `decidekit tune` finds the threshold your saved scores actually support:
+
+```bash
+decidekit tune --dataset data/sample_dataset.jsonl \
+               --results data/sample_results_budget-1.jsonl \
+               --min-precision 0.8 --min-recall 0.8
+```
+
+```
+           threshold  precision   recall      F1  accuracy     $/100  $/correct
+default        0.500      1.000    0.667   0.800     0.833   $0.0800    $0.0010
+tuned          0.450      1.000    1.000   1.000     1.000   $0.0800    $0.0008
+```
+
+How it works:
+
+- **Saved scores only.** Tuning reuses the probabilities already in the results file and never calls a model — so the cost per 100 eval runs is identical at both thresholds; only decision quality moves. (Cost *per correct decision* does move: the denominator improves.)
+- **Stratified cross-validation.** Candidate thresholds (the observed score values) are selected on each fold's training part — best F1 among those meeting your precision/recall floors — and scored on the held-out fold. The report shows both the full-data tuned row and the out-of-fold means, so you can see the honest generalisation estimate next to the optimistic one.
+- **Floors are reported, not faked.** If no threshold meets both minimums, the best-F1 threshold is still shown, flagged as not meeting the floors.
+- `yes_no` cases only: a `choice` distribution has no single threshold to tune, and `score` cases are excluded for the same reason score confidence is excluded from ECE.
+
+This feature was motivated by Hamel Husain's [decision-model evals write-up](https://hamel.dev/blog/posts/decision-model-evals/), which found the same effect at larger scale: default thresholds understating models, and uncalibrated scores being trusted as probabilities.
+
 ## Library use
 
 ```python
-from decidekit import load_cases, load_results, evaluate, build_comparison, render_markdown
+from decidekit import load_cases, load_results, evaluate, build_comparison, render_markdown, tune_threshold
 
 cases = load_cases("data/sample_dataset.jsonl")
 metrics = evaluate(cases, load_results("my_results.jsonl"))
 print(metrics["accuracy"], metrics["ece"], metrics["cost_per_correct_usd"])
+
+report = tune_threshold(cases, load_results("my_results.jsonl"),
+                        min_precision=0.8, min_recall=0.8)
+print(report["tuned"]["threshold"], report["cross_validation"]["mean_f1"])
 ```
 
 ## Honest limitations
 
 - **The bundled dataset is a demo, not a benchmark.** 13 hand-written content-moderation cases and three invented models exist so the CLI runs offline and the metric story is visible. Drawing conclusions about real models requires a dataset that is larger, representative of your traffic, and labeled with care.
 - **Calibration needs volume.** ECE over a handful of cases is mostly noise; treat it as meaningful only with hundreds of predictions per bin range you care about.
+- **A tuned threshold is still an estimate.** Cross-validation keeps the tuning honest on small data, but a threshold tuned on last month's labels can drift with your traffic; re-tune on fresh labels and sanity-check on held-out data before shipping it to production.
 - **Score-case confidence is not calibrated here.** A score's self-reported confidence is not a probability of being correct, so score cases contribute MAE only — folding them into ECE would be a category error.
 - **Ground truth is assumed correct.** decidekit measures agreement with your labels; if the labels are wrong or contested, the metrics faithfully measure the wrong thing.
 - **One results file = one model**, and every result must reference a known case. Missing cases are excluded and counted (`n_missing`); unknown case IDs fail loudly.
@@ -101,7 +135,7 @@ print(metrics["accuracy"], metrics["ece"], metrics["cost_per_correct_usd"])
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[test]"
-python -m pytest        # 47 tests, fully offline
+python -m pytest        # 63 tests, fully offline
 ```
 
 Requires Python ≥ 3.10. The package itself has **zero runtime dependencies** — the evaluation math is plain Python on purpose, so it can drop into any pipeline.
