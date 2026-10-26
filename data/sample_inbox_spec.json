@@ -1,0 +1,41 @@
+{
+  "actions": [
+    "task",
+    "draft",
+    "ignore"
+  ],
+  "inaction": "ignore",
+  "rules": [
+    {
+      "when": {
+        "is_noise": true
+      },
+      "action": "ignore"
+    },
+    {
+      "when": {
+        "needs_reply": true,
+        "urgent": true
+      },
+      "action": "task"
+    },
+    {
+      "when": {
+        "needs_reply": true
+      },
+      "action": "draft"
+    },
+    {
+      "action": "ignore"
+    }
+  ],
+  "costs": {
+    "task->ignore": 10,
+    "draft->ignore": 6,
+    "task->draft": 3,
+    "ignore->task": 4,
+    "ignore->draft": 2,
+    "draft->task": 2
+  },
+  "default_error": 1
+}

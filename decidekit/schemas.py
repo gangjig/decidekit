@@ -66,6 +66,13 @@ class Case:
 
     ``correct`` is a ``bool`` for ``yes_no``, one of ``options`` for
     ``choice``, and a number inside ``[score_min, score_max]`` for ``score``.
+
+    ``group`` / ``field`` are optional and only used by composed-action
+    evaluation (see :mod:`decidekit.actions`): several cases that are
+    fields of one real-world item (one email's ``is_noise`` /
+    ``needs_reply`` / ``urgent`` ...) share a ``group`` id, and ``field``
+    names the case's role inside the group.  When ``field`` is omitted,
+    the part of ``id`` after the last ``":"`` is used as the field name.
     """
 
     id: str
@@ -76,6 +83,8 @@ class Case:
     score_min: float | None = None
     score_max: float | None = None
     context: str | None = None
+    group: str | None = None
+    field: str | None = None
 
     @classmethod
     def from_dict(cls, raw: Any) -> "Case":
@@ -124,6 +133,12 @@ class Case:
         context = raw.get("context")
         if context is not None and not isinstance(context, str):
             _fail(f"case {case_id!r}: 'context' must be a string when present")
+        group = raw.get("group")
+        if group is not None and (not isinstance(group, str) or not group):
+            _fail(f"case {case_id!r}: 'group' must be a non-empty string when present")
+        field = raw.get("field")
+        if field is not None and (not isinstance(field, str) or not field):
+            _fail(f"case {case_id!r}: 'field' must be a non-empty string when present")
         return cls(
             id=case_id,
             kind=kind,
@@ -133,7 +148,18 @@ class Case:
             score_min=score_min,
             score_max=score_max,
             context=context,
+            group=group,
+            field=field,
         )
+
+    @property
+    def field_name(self) -> str | None:
+        """The case's field name inside its group, or None when ungrouped."""
+        if self.group is None:
+            return None
+        if self.field:
+            return self.field
+        return self.id.rsplit(":", 1)[-1]
 
 
 # ---------------------------------------------------------------------------

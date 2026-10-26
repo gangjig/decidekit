@@ -1,0 +1,18 @@
+{"id": "mail-1:is_noise", "kind": "yes_no", "prompt": "Is this email just noise (newsletter/ads/notification)?", "correct": false, "group": "mail-1", "field": "is_noise"}
+{"id": "mail-1:needs_reply", "kind": "yes_no", "prompt": "Does this email need a reply or action from the owner?", "correct": true, "group": "mail-1", "field": "needs_reply"}
+{"id": "mail-1:urgent", "kind": "yes_no", "prompt": "Is this email urgent?", "correct": true, "group": "mail-1", "field": "urgent"}
+{"id": "mail-2:is_noise", "kind": "yes_no", "prompt": "Is this email just noise (newsletter/ads/notification)?", "correct": false, "group": "mail-2", "field": "is_noise"}
+{"id": "mail-2:needs_reply", "kind": "yes_no", "prompt": "Does this email need a reply or action from the owner?", "correct": true, "group": "mail-2", "field": "needs_reply"}
+{"id": "mail-2:urgent", "kind": "yes_no", "prompt": "Is this email urgent?", "correct": false, "group": "mail-2", "field": "urgent"}
+{"id": "mail-3:is_noise", "kind": "yes_no", "prompt": "Is this email just noise (newsletter/ads/notification)?", "correct": true, "group": "mail-3", "field": "is_noise"}
+{"id": "mail-3:needs_reply", "kind": "yes_no", "prompt": "Does this email need a reply or action from the owner?", "correct": false, "group": "mail-3", "field": "needs_reply"}
+{"id": "mail-3:urgent", "kind": "yes_no", "prompt": "Is this email urgent?", "correct": false, "group": "mail-3", "field": "urgent"}
+{"id": "mail-4:is_noise", "kind": "yes_no", "prompt": "Is this email just noise (newsletter/ads/notification)?", "correct": false, "group": "mail-4", "field": "is_noise"}
+{"id": "mail-4:needs_reply", "kind": "yes_no", "prompt": "Does this email need a reply or action from the owner?", "correct": false, "group": "mail-4", "field": "needs_reply"}
+{"id": "mail-4:urgent", "kind": "yes_no", "prompt": "Is this email urgent?", "correct": false, "group": "mail-4", "field": "urgent"}
+{"id": "mail-5:is_noise", "kind": "yes_no", "prompt": "Is this email just noise (newsletter/ads/notification)?", "correct": false, "group": "mail-5", "field": "is_noise"}
+{"id": "mail-5:needs_reply", "kind": "yes_no", "prompt": "Does this email need a reply or action from the owner?", "correct": true, "group": "mail-5", "field": "needs_reply"}
+{"id": "mail-5:urgent", "kind": "yes_no", "prompt": "Is this email urgent?", "correct": true, "group": "mail-5", "field": "urgent"}
+{"id": "mail-6:is_noise", "kind": "yes_no", "prompt": "Is this email just noise (newsletter/ads/notification)?", "correct": true, "group": "mail-6", "field": "is_noise"}
+{"id": "mail-6:needs_reply", "kind": "yes_no", "prompt": "Does this email need a reply or action from the owner?", "correct": false, "group": "mail-6", "field": "needs_reply"}
+{"id": "mail-6:urgent", "kind": "yes_no", "prompt": "Is this email urgent?", "correct": false, "group": "mail-6", "field": "urgent"}

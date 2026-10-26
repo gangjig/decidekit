@@ -36,6 +36,12 @@ decidekit validate --dataset data/sample_dataset.jsonl \
 # Tune the yes/no threshold from the saved scores (no model calls)
 decidekit tune --dataset data/sample_dataset.jsonl \
                --results data/sample_results_budget-1.jsonl
+
+# Compose field decisions into actions and score what the actions cost
+decidekit actions --dataset data/sample_inbox_dataset.jsonl \
+                  --spec data/sample_inbox_spec.json \
+                  --results data/sample_inbox_results_fieldsharp-1.jsonl \
+                            data/sample_inbox_results_actionwise-1.jsonl
 ```
 
 The comparison prints a Markdown table:
@@ -72,6 +78,8 @@ Every command also accepts `--json` for machine-readable output.
 
 Parsing is **strict on purpose**: a picked choice that is not among the options, a probability outside [0, 1], a probability vector that doesn't sum to ~1, or a score outside its range all fail loudly with a validation error. Silently repairing malformed model output would corrupt the very numbers you're evaluating.
 
+A case may also carry optional `group` and `field` strings — several cases that are fields of one real-world item (one email's `is_noise` / `needs_reply` / `urgent`) share a `group`, and `field` names each case's role. Only [composed-action evaluation](#composed-actions-score-the-decision-the-user-actually-feels) uses them; the other commands ignore them.
+
 ## The metrics, briefly
 
 - **Accuracy** — fraction of `yes_no` (threshold 0.5) and `choice` decisions that match the known-correct answer.
@@ -106,6 +114,44 @@ How it works:
 - `yes_no` cases only: a `choice` distribution has no single threshold to tune, and `score` cases are excluded for the same reason score confidence is excluded from ECE.
 
 This feature was motivated by Hamel Husain's [decision-model evals write-up](https://hamel.dev/blog/posts/decision-model-evals/), which found the same effect at larger scale: default thresholds understating models, and uncalibrated scores being trusted as probabilities.
+
+## Composed actions: score the decision the user actually feels
+
+Per-field metrics score each decision on its own — but production systems don't ship a field, they ship an **action** composed from several fields. An inbox triage agent drafts a reply, files a task, or ignores the mail, based on its `is_noise` / `needs_reply` / `urgent` calls. The field ranking and the action ranking can disagree, and the disagreement is where the money goes: in the Foyer inbox-agent study below, the system with the best per-field accuracy, composed into actions, most often committed the most expensive error — ignoring mail that needed action.
+
+`decidekit actions` evaluates that layer. Cases that are fields of one item share a `group` id in the dataset (with a `field` name, or an `id` ending in `:<field>`), and an **action spec** (JSON) says how field values compose into actions, and what each kind of action error costs:
+
+```json
+{
+  "actions": ["task", "draft", "ignore"],
+  "inaction": "ignore",
+  "rules": [
+    {"when": {"is_noise": true}, "action": "ignore"},
+    {"when": {"needs_reply": true, "urgent": true}, "action": "task"},
+    {"when": {"needs_reply": true}, "action": "draft"},
+    {"action": "ignore"}
+  ],
+  "costs": {"task->ignore": 10, "draft->ignore": 6, "task->draft": 3},
+  "default_error": 1
+}
+```
+
+Rules match first-to-last; the last rule has no `when` and is the default. Conditions are `true`/`false` for `yes_no` fields, an option name (or list) for `choice` fields, and `{"gte"/"lte": n}` for `score` fields. Cost keys are `"gold->pred"`; either side may be `"*"`, and a correct action always costs 0. The gold action is the spec applied to the known-correct field values; the predicted action is the spec applied to the model's saved decisions — still no model calls.
+
+The bundled inbox demo reproduces the divergence with two invented models over six emails:
+
+```
+model            field acc field rank action acc cost/item action rank false-inaction
+actionwise-1         0.833          2      0.667     0.833           1           0.0%
+fieldsharp-1         0.944          1      0.833     1.667           2          33.3%
+
+Ranked by field accuracy: fieldsharp-1 > actionwise-1
+Ranked by action cost:    actionwise-1 > fieldsharp-1
+```
+
+`fieldsharp-1` wins every field ranking and loses where it counts: its single field miss (calling one actionable email "noise") becomes a `task -> ignore` error at cost 10, and a third of the mail that needed action gets ignored. The report shows, per model: field accuracy next to **action accuracy**, **mean cost per item**, each model's rank under both orderings, the **false-inaction rate** (of the items whose gold action was not the `inaction` action, how often the system did nothing — the expensive failure mode), and the costliest gold→pred confusions. Field conditions must be consistent across groups — a group missing a field the others have fails loudly rather than being quietly dropped, and a group the model only partially answered is counted as incomplete and excluded.
+
+This feature was motivated by Federico Lucca's [“Measure Before You Train”](https://arxiv.org/abs/2610.32955) (the Foyer study), which measured exactly this on a real personal inbox agent: the most field-accurate system ignored 18% of actionable mail once its fields were composed into actions, vs 4% for the best LLM — and a cost-chosen threshold on one field halved that rate.
 
 ## Library use
 

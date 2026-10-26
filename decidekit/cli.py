@@ -11,6 +11,12 @@ import json
 import sys
 from pathlib import Path
 
+from .actions import (
+    build_action_comparison,
+    compose_actions,
+    load_action_spec,
+    render_action_report,
+)
 from .data import load_cases, load_results, model_name_for
 from .metrics import evaluate
 from .report import build_comparison, render_markdown
@@ -84,6 +90,27 @@ def _cmd_tune(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_actions(args: argparse.Namespace) -> int:
+    cases = load_cases(args.dataset)
+    spec = load_action_spec(args.spec)
+    named: dict[str, dict] = {}
+    for results_path in args.results:
+        records = load_results(results_path)
+        name = model_name_for(records, results_path, None)
+        if name in named:
+            raise DecisionValidationError(
+                f"duplicate model name {name!r} across results files; "
+                "set the 'model' field in each record to disambiguate"
+            )
+        named[name] = compose_actions(cases, records, spec)
+    comparison = build_action_comparison(named)
+    if args.json:
+        print(json.dumps({"models": named, "comparison": comparison}, indent=2))
+    else:
+        print(render_action_report(named, comparison), end="")
+    return 0
+
+
 def _cmd_validate(args: argparse.Namespace) -> int:
     cases = load_cases(args.dataset)
     records = load_results(args.results)
@@ -147,6 +174,17 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Shuffle seed for the fold split (default 42)")
     p_tune.add_argument("--json", action="store_true", help="Emit the tuning report as JSON")
     p_tune.set_defaults(func=_cmd_tune)
+
+    p_actions = sub.add_parser(
+        "actions",
+        help="Compose field decisions into actions via a spec; score action cost per model",
+    )
+    p_actions.add_argument("--dataset", required=True, help="Dataset JSONL file (grouped cases)")
+    p_actions.add_argument("--spec", required=True, help="Action spec JSON file")
+    p_actions.add_argument("--results", required=True, nargs="+",
+                           help="One or more results JSONL files, one per model")
+    p_actions.add_argument("--json", action="store_true", help="Emit the report as JSON")
+    p_actions.set_defaults(func=_cmd_actions)
 
     p_validate = sub.add_parser("validate", help="Check a results file parses against the schemas")
     p_validate.add_argument("--dataset", required=True, help="Dataset JSONL file")
